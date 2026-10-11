@@ -19,7 +19,9 @@ if (!LIBRARY_ID || !API_KEY) {
 
 app.use(express.json({ limit: "50kb" }));
 app.use(express.static("public"));
-
+app.get("/", (req, res) => {
+  res.sendFile(require("path").join(__dirname, "public", "index.html"));
+});
 const upload = multer({
   dest: os.tmpdir(),
   limits: { fileSize: MAX_MB * 1024 * 1024, files: 1 },
