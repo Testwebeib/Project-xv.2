@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101014"><title>PROJECT X — Upload Demo</title>
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#1b1b22;--line:#34343e;--text:#f5f5f7;--muted:#aaaab6;--red:#ff3158}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+header{border-bottom:1px solid var(--line);padding:16px}header,main{max-width:1050px;margin:auto}main{padding:20px 16px 60px}
+.brand{font-size:22px;font-weight:900}.brand span{color:var(--red)}.muted{color:var(--muted)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,.8fr);gap:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+h1{font-size:clamp(26px,5vw,38px);line-height:1.1}h2{font-size:20px;margin-top:0}
+label{display:block;font-size:14px;color:var(--muted);margin:13px 0 6px}
+input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#101014;color:var(--text)}
+button{padding:12px 16px;border:0;border-radius:10px;background:var(--red);color:white;font-weight:800;cursor:pointer;margin-top:14px}
+button:disabled{opacity:.5;cursor:wait}.notice{border:1px solid #6c3441;background:#2a1d22;border-radius:10px;padding:12px;font-size:13px}
+#status{white-space:pre-wrap;margin-top:12px}.video{border:1px solid var(--line);border-radius:12px;padding:12px;margin:10px 0;overflow-wrap:anywhere}.video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;margin-top:8px}
+@media(max-width:720px){.layout{grid-template-columns:1fr}header{padding:14px}main{padding:14px 12px 50px}}
+</style></head>
+<body>
+<header><div class="brand">PROJECT <span>X</span></div><div class="muted">Mobile upload + playback starter</div></header>
+<main>
+<h1>Upload a video</h1>
+<p class="muted">Choose a video file from your phone. This page sends it to your own server, which stores it with your configured video provider.</p>
+<div class="layout">
+<section class="panel">
+<h2>Creator upload</h2>
+<form id="uploadForm">
+<label for="title">Video title</label><input id="title" name="title" maxlength="100" required placeholder="Enter a title">
+<label for="video">Video file (MP4, MOV, WebM)</label><input id="video" name="video" type="file" accept="video/mp4,video/quicktime,video/webm" required>
+<p id="fileInfo" class="muted">Choose a video file. Large files may take time to upload; keep this tab open.</p>
+<div class="notice">Only upload lawful content featuring consenting adults, with documented age/identity verification and distribution rights. New videos should remain private or unlisted until moderation is complete.</div>
+<button id="submitBtn" type="submit">Upload video</button>
+<div id="status" class="muted" role="status"></div>
+</form>
+</section>
+<aside class="panel">
+<h2>Setup checklist</h2>
+<ol class="muted"><li>Create a Bunny Stream account and video library.</li><li>Put the library ID and API key in your server's environment secrets.</li><li>Deploy this Node.js project to a server that supports uploads.</li><li>Configure access restrictions, domain restrictions and moderation before public launch.</li></ol>
+<p class="notice">This starter uses a temporary in-memory catalog. It is not production-ready: add a database, authentication/roles, resumable uploads, rate limits, malware/content review, and signed playback before launching.</p>
+</aside>
+</div>
+<section class="panel" style="margin-top:16px"><h2>Available videos</h2><p class="muted">Uploaded videos appear here after the server accepts them. Processing may take a while.</p><div id="videos">Loading…</div></section>
+</main>
+<script>
+const form=document.getElementById('uploadForm'), fileInput=document.getElementById('video'), statusEl=document.getElementById('status'), btn=document.getElementById('submitBtn');
+fileInput.addEventListener('change',()=>{const f=fileInput.files[0];document.getElementById('fileInfo').textContent=f?`${f.name} · ${(f.size/1024/1024).toFixed(1)} MB`:'Choose a video file.';});
+async function loadVideos(){const box=document.getElementById('videos');try{const r=await fetch('/api/videos');if(!r.ok)throw new Error('Server unavailable');const items=await r.json();box.innerHTML='';if(!items.length){box.textContent='No uploaded videos yet.';return;}items.forEach(v=>{const div=document.createElement('article');div.className='video';const title=document.createElement('strong');title.textContent=v.title;const meta=document.createElement('p');meta.className='muted';meta.textContent=`Status: ${v.status} · Review: ${v.category}`;div.append(title,meta);if(v.embedUrl){const iframe=document.createElement('iframe');iframe.src=v.embedUrl;iframe.title=v.title;iframe.allow='accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;';iframe.allowFullscreen=true;div.appendChild(iframe);}box.appendChild(div);});}catch(e){box.textContent='Run the Node.js server and configure storage to load videos.';}}
+form.addEventListener('submit',async e=>{e.preventDefault();const file=fileInput.files[0];if(!file)return;btn.disabled=true;statusEl.textContent='Uploading… keep this page open.';try{const data=new FormData();data.append('title',document.getElementById('title').value.trim());data.append('video',file);const r=await fetch('/api/videos',{method:'POST',body:data});const result=await r.json();if(!r.ok)throw new Error(result.error||'Upload failed');statusEl.textContent='Upload received. Video processing may take a few minutes.';form.reset();document.getElementById('fileInfo').textContent='Choose a video file.';await loadVideos();}catch(err){statusEl.textContent='Upload error: '+err.message;}finally{btn.disabled=false;}});
+loadVideos();
+</script>
+</body></html>
